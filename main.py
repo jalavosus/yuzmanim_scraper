@@ -123,7 +123,6 @@ def parse_json_data(json_data, selected_minyanim=MINYANIM):
   crap_string = "<a class='btn btn-outline-secondary btn-lg' href='https://www.yuzmanim.com/shabbos'>See Shabbos Schedule</a>"
 
   parsed_data = []
-  pprint(json_data)
 
   for key, data in json_data.items():
     if len(data) == 0:
@@ -163,8 +162,6 @@ def main():
   #   week_data = json.load(raw_file)
   parsed_data = parse_json_data(week_data)
 
-
-
   for minyan in MINYANIM:
     if minyan == "shacharis":
       minyan = "shacharit"
@@ -177,7 +174,8 @@ def main():
       if pd["date"] not in existing_dates and pd["minyan"] == minyan:
         minyanim.append(pd)
 
-    collection.insert_many(minyanim)
+    if len(minyanim) > 0:
+      collection.insert_many(minyanim)
 
 
 
