@@ -41,7 +41,7 @@ def get_header_data():
     CSRF tokens and whatnot to prevent regular humans from directly querying
     his API.
     Well, guess what YUZmanim Developers? You can regex the CSRF token out of the page's
-    HTML. .
+    HTML.
     Returns a header dict with all the fields that are present when an API
     request is fired off from the website.
   """
