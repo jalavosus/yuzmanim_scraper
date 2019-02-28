@@ -37,10 +37,10 @@ def create_cookie_string(cookiejar):
 def get_header_data():
   """
     Loads the shacharit page of YUZmanim, which fires off an API request
-    to its backend. Because YUZmanim Developers hates people stealing his data, he uses
+    to its backend. Because "YUZmanim Developers" hates people stealing his data, he uses
     CSRF tokens and whatnot to prevent regular humans from directly querying
     his API.
-    Well, guess what YUZmanim Developers? You can regex the CSRF token out of the page's
+    Well, guess what "YUZmanim Developers"? You can regex the CSRF token out of the page's
     HTML.
     Returns a header dict with all the fields that are present when an API
     request is fired off from the website.
@@ -99,7 +99,7 @@ def get_json(header_data, minyan, date=None):
 
 
 def sanitize_minyan_data(minyan_data, **kwargs):
-  
+  # Ashkenazi hebrew is the worst
   if kwargs["minyan"] == "shacharis":
     kwargs["minyan"] = "shacharit"
 
@@ -116,67 +116,62 @@ def sanitize_minyan_data(minyan_data, **kwargs):
   return sanitized_data
 
 
-def parse_json_data(json_data, selected_minyanim=MINYANIM):
-  if "shacharit" in selected_minyanim:
-    selected_minyanim.pop("shacharit")
-    selected_minyanim.append("shacharis")
+def parse_json_data(json_data, minyan):
   crap_string = "<a class='btn btn-outline-secondary btn-lg' href='https://www.yuzmanim.com/shabbos'>See Shabbos Schedule</a>"
 
   parsed_data = []
 
-  for key, data in json_data.items():
-    if len(data) == 0:
-      continue
-    for minyan in selected_minyanim:
-      hebrew_date = data[minyan]["jewish_date"]
-      day_of_week = data[minyan]["day_of_week"]
+  hebrew_date = json_data["jewish_date"]
+  day_of_week = json_data["day_of_week"]
 
-      all_minyanim = data[minyan]["minyanim"][0]
-      # Basically, if the schedule is Friday maariv or all of Saturday
-      if "text" in all_minyanim and all_minyanim["text"] == crap_string:
-        continue
-      all_minyanim = all_minyanim["tefillos"]
-      splat_args = { "minyan": minyan, "hebrew_date": hebrew_date, "day_of_week": day_of_week }
+  all_minyanim = json_data["minyanim"][0]
+  # Basically, if the schedule is Friday maariv or all of Saturday
+  if "text" in all_minyanim and all_minyanim["text"] == crap_string:
+    pass
+  else:
+    all_minyanim = all_minyanim["tefillos"]
+    splat_args = { "minyan": minyan, "hebrew_date": hebrew_date, "day_of_week": day_of_week }
 
-      parsed_data += [sanitize_minyan_data(md, **splat_args) for md in all_minyanim]
+    parsed_data += [sanitize_minyan_data(md, **splat_args) for md in all_minyanim]
 
   return parsed_data
+
+
+def mongo_insert(data, minyan):
+  collection = DB[minyan]
+
+  existing_dates = collection.distinct("date")
+  minyanim_to_insert = []
+  for d in data:
+    if d["date"] not in existing_dates and d["minyan"] == minyan:
+      minyanim_to_insert.append(d)
+
+  if len(minyanim_to_insert) > 0:
+    collection.insert_many(minyanim_to_insert)
 
 
 def main():
   header_data = get_header_data()
 
-  data = get_json(header_data, "shacharis")
-
-  days_list = [d["date"] for d in data["days_list"]]
-
-  week_data = { date: {} for date in days_list }
-
-  # This is slightly inefficient, since I double-fetch Shacharit times.
-  # Oh well.
-  for minyan in MINYANIM:
-    for date in days_list:
-      week_data[date][minyan] = get_json(header_data, minyan, date=date)
-
-  # with open("raw_data.json", "r") as raw_file:
-  #   week_data = json.load(raw_file)
-  parsed_data = parse_json_data(week_data)
+  date_list = None
 
   for minyan in MINYANIM:
+    raw_data = get_json(header_data, minyan)
+
     if minyan == "shacharis":
       minyan = "shacharit"
 
-    collection = DB[minyan]
-    existing_dates = collection.distinct("date")
+    if not date_list:
+      date_list = [d["date"] for d in raw_data["days_list"][1:]]
 
-    minyanim = []
-    for pd in parsed_data:
-      if pd["date"] not in existing_dates and pd["minyan"] == minyan:
-        minyanim.append(pd)
+    parsed_data = parse_json_data(raw_data, minyan)
 
-    if len(minyanim) > 0:
-      collection.insert_many(minyanim)
+    for date in date_list:
+      raw_data = get_json(header_data, minyan, date=date)
+      parsed_data += parse_json_data(raw_data, minyan)
 
+    pprint(parsed_data)
+    # mongo_insert(parsed_data, minyan)
 
 
 if __name__ in '__main__':

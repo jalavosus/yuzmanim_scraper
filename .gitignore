@@ -2,3 +2,4 @@ config.py
 *.json
 __pycache__/
 replacements.txt
+..bfg*
