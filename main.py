@@ -37,10 +37,10 @@ def create_cookie_string(cookiejar):
 def get_header_data():
   """
     Loads the shacharit page of YUZmanim, which fires off an API request
-    to its backend. Because "YUZmanim Developers" hates people stealing his data, he uses
-    CSRF tokens and whatnot to prevent regular humans from directly querying
-    his API.
-    Well, guess what "YUZmanim Developers"? You can regex the CSRF token out of the page's
+    to its backend. Because the YUZmanim Devs hate people stealing their data,
+    they use CSRF tokens and whatnot to prevent regular humans from directly
+    querying their API.
+    Well, guess what YUZmanim Devs? You can regex the CSRF token out of the page's
     HTML.
     Returns a header dict with all the fields that are present when an API
     request is fired off from the website.
