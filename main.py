@@ -158,9 +158,6 @@ def main():
   for minyan in MINYANIM:
     raw_data = get_json(header_data, minyan)
 
-    if minyan == "shacharis":
-      minyan = "shacharit"
-
     if not date_list:
       date_list = [d["date"] for d in raw_data["days_list"][1:]]
 
@@ -168,10 +165,15 @@ def main():
 
     for date in date_list:
       raw_data = get_json(header_data, minyan, date=date)
+      if list(raw_data.keys()) == ["message"]:
+        continue
       parsed_data += parse_json_data(raw_data, minyan)
 
-    pprint(parsed_data)
-    # mongo_insert(parsed_data, minyan)
+    if minyan == "shacharis":
+      minyan = "shacharit"
+
+    # pprint(parsed_data)
+    mongo_insert(parsed_data, minyan)
 
 
 if __name__ in '__main__':
